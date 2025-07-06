@@ -8,7 +8,7 @@
 
 ```
 Fin_RL/
-├── portfolio_macd.py           # 原始MACD技术指标策略
+├── portfolio_macd.py           # 原始MACD技术指标策略 赵huaqin的原始测试代码
 ├── portfolio_mab.py            # 多臂老虎机强化学习策略
 ├── test_mab_strategy.py        # 策略测试脚本
 ├── utils/                      # 工具包
