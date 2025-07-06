@@ -201,12 +201,17 @@ class StockMABStrategy:
                 if self.strategy.total_counts > 0:
                     values = self.strategy.counts / (self.strategy.total_counts + 1e-8)
                 else:
-                    values = np.array([0.4, 0.3, 0.2, 0.1])  # 不同的初始偏好
+                    # 生成递减的权重分配
+                    weights = np.array([1.0 / (i + 1) for i in range(self.n_stocks)])
+                    values = weights / np.sum(weights)
             elif isinstance(self.strategy, UCBStrategy):  # UCB
-                # UCB: 平衡探索，稍微不同的初始分配
-                values = np.array([0.35, 0.25, 0.25, 0.15])
+                # UCB: 平衡探索，使用随机但有偏好的初始分配
+                np.random.seed(42)  # 确保可重复性
+                weights = np.random.dirichlet(np.ones(self.n_stocks) * 2)
+                values = weights
             elif isinstance(self.strategy, ThompsonSamplingStrategy):  # Thompson Sampling
                 # Thompson Sampling: 基于Beta分布采样
+                np.random.seed(123)  # 不同的种子确保差异化
                 values = np.array([
                     np.random.beta(self.strategy.alpha[i], self.strategy.beta[i]) 
                     for i in range(self.n_stocks)
@@ -304,7 +309,13 @@ class StockMABStrategy:
 # 使用示例和测试函数
 def test_mab_strategy():
     """测试多臂老虎机策略"""
-    tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']
+    tickers = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN',  # 科技股
+        'TSLA', 'NVDA', 'META', 'NFLX',   # 科技/电动车/AI
+        'JPM', 'BAC', 'WFC', 'GS',        # 金融股
+        'JNJ', 'UNH', 'PFE', 'ABBV',     # 医疗保健
+        'KO', 'PG', 'WMT', 'DIS'          # 消费品/零售/娱乐
+    ]
     
     # 测试不同策略
     strategies = {
@@ -323,12 +334,20 @@ def test_mab_strategy():
         for step in range(n_steps):
             # 模拟股票价格变动
             prices = {}
-            for ticker in tickers:
-                # 模拟价格（随机游走 + 趋势）
+            for i, ticker in enumerate(tickers):
+                # 模拟价格（随机游走 + 不同的趋势）
                 base_price = 100
-                trend = {'AAPL': 0.001, 'MSFT': 0.0005, 'GOOGL': 0.0008, 'AMZN': 0.0003}
+                # 为不同股票设置不同的趋势
+                trend_map = {
+                    'AAPL': 0.001, 'MSFT': 0.0008, 'GOOGL': 0.0006, 'AMZN': 0.0004,
+                    'TSLA': 0.0015, 'NVDA': 0.0012, 'META': 0.0005, 'NFLX': 0.0003,
+                    'JPM': 0.0002, 'BAC': 0.0001, 'WFC': 0.0001, 'GS': 0.0003,
+                    'JNJ': 0.0002, 'UNH': 0.0006, 'PFE': 0.0001, 'ABBV': 0.0004,
+                    'KO': 0.0001, 'PG': 0.0002, 'WMT': 0.0003, 'DIS': 0.0002
+                }
+                trend = trend_map.get(ticker, 0.0002)
                 noise = np.random.normal(0, 0.02)
-                prices[ticker] = base_price * (1 + trend[ticker] + noise)
+                prices[ticker] = base_price * (1 + trend + noise)
             
             strategy.update_prices(prices)
             
@@ -341,7 +360,13 @@ def test_mab_strategy():
         print(f"Total Reward: {stats['total_reward']:.4f}")
         print(f"Average Reward: {stats['average_reward']:.4f}")
         print(f"Best Stock: {stats['best_arm']}")
-        print("Portfolio Weights:", {k: f"{v:.3f}" for k, v in stats['portfolio_weights'].items()})
+        print("Portfolio Weights (top 5):")
+        sorted_weights = sorted(stats['portfolio_weights'].items(), key=lambda x: x[1], reverse=True)
+        for ticker, weight in sorted_weights[:5]:
+            print(f"  {ticker}: {weight:.3f}")
+        print("...")
+        print(f"  Total stocks: {len(tickers)}")
+        print(f"  Weight sum: {sum(stats['portfolio_weights'].values()):.3f}")
 
 
 if __name__ == "__main__":

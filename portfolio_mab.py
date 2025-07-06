@@ -9,16 +9,28 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg')  
 import matplotlib.pyplot as plt
 import sys
 import os
+import matplotlib.font_manager as fm
+
+
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Liberation Sans', 'Arial', 'SimHei']  
+plt.rcParams['axes.unicode_minus'] = False 
+plt.rcParams['font.size'] = 10  
 
 sys.path.append('utils')
 from multi_armed_bandit_strategy import StockMABStrategy
 
 
-tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']
+tickers = [
+    'AAPL', 'MSFT', 'GOOGL', 'AMZN',  # 科技股
+    'TSLA', 'NVDA', 'META', 'NFLX',   # 科技/电动车/AI
+    'JPM', 'BAC', 'WFC', 'GS',        # 金融股
+    'JNJ', 'UNH', 'PFE', 'ABBV',     # 医疗保健
+    'KO', 'PG', 'WMT', 'DIS'          # 消费品/零售/娱乐
+]
 start, end = '2023-01-01', '2024-12-31'
 initial_cash = 100_000.0
 
@@ -167,7 +179,7 @@ class MultiArmedBanditStrategy(bt.Strategy):
         print(f"📊 总奖励: {stats['total_reward']:.4f}")
         print(f"📊 平均奖励: {stats['average_reward']:.4f}")
         print(f"🏆 最佳股票: {stats['best_arm']}")
-        print(f"�� 各股票平均奖励:")
+        print(f"📊 各股票平均奖励:")
         for ticker, value in stats['arm_values'].items():
             print(f"  {ticker}: {value:.4f}")
         
@@ -280,23 +292,23 @@ def main():
     returns = [results[s]['return_pct'] for s in strategies]
     
     axes[0, 0].bar(strategies, returns)
-    axes[0, 0].set_title('不同策略收益率比较')
-    axes[0, 0].set_ylabel('收益率 (%)')
+    axes[0, 0].set_title('Strategy Return Comparison')
+    axes[0, 0].set_ylabel('Return (%)')
     
     # 绘制最终价值比较
     final_values = [results[s]['final_value'] for s in strategies]
     axes[0, 1].bar(strategies, final_values)
-    axes[0, 1].set_title('最终投资组合价值')
-    axes[0, 1].set_ylabel('价值 ($)')
+    axes[0, 1].set_title('Final Portfolio Value')
+    axes[0, 1].set_ylabel('Value ($)')
     
-    # 绘制股票价格走势
-    for ticker in tickers:
-        axes[1, 0].plot(price_df.index, price_df[ticker], label=ticker)
-    axes[1, 0].set_title('股票价格走势')
-    axes[1, 0].legend()
+    # 绘制股票价格走势 (只显示前10只股票，避免图表过于拥挤)
+    for i, ticker in enumerate(tickers[:10]):
+        axes[1, 0].plot(price_df.index, price_df[ticker], label=ticker, alpha=0.7)
+    axes[1, 0].set_title('Stock Price Trends (Top 10)')
+    axes[1, 0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     
     # 绘制基准比较（等权重买入持有）
-    equal_weights = {ticker: 0.25 for ticker in tickers}
+    equal_weights = {ticker: 1.0/len(tickers) for ticker in tickers}
     benchmark_returns = []
     for date in price_df.index:
         daily_return = sum(
@@ -305,12 +317,14 @@ def main():
         )
         benchmark_returns.append(daily_return * initial_cash)
     
-    axes[1, 1].plot(price_df.index, benchmark_returns, label='等权重基准', linestyle='--')
-    axes[1, 1].set_title('策略 vs 基准')
+    axes[1, 1].plot(price_df.index, benchmark_returns, label='Equal Weight Benchmark', linestyle='--')
+    axes[1, 1].set_title('Strategy vs Benchmark')
     axes[1, 1].legend()
+    axes[1, 1].set_ylabel('Portfolio Value ($)')
     
     plt.tight_layout()
-    plt.savefig('mab_strategy_comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig('mab_strategy_comparison.png', dpi=300, bbox_inches='tight', 
+                facecolor='white', edgecolor='none')
     print("📊 图表已保存为: mab_strategy_comparison.png")
     
     # 保存详细结果
