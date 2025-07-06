@@ -52,7 +52,7 @@
 ```
 Fin_RL/
 ├── portfolio_mab.py                    # 🚀 主要：多臂老虎机策略回测系统
-├── portfolio_macd.py                   # 📈 传统MACD技术指标策略
+├── portfolio_macd.py                   # 📈 赵huaqin的测试代码
 ├── test_stocks.py                      # 🧪 股票数据验证工具
 ├── utils/                              # 🛠️ 核心工具包
 │   ├── __init__.py
